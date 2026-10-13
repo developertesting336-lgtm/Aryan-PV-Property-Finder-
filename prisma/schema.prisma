@@ -1,0 +1,193 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Authentication Models (Compatible with Better-Auth)
+model User {
+  id            String          @id @default(cuid())
+  name          String
+  email         String          @unique
+  emailVerified Boolean         @default(false)
+  image         String?
+  role          String          @default("user")
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @default(now()) @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  savedProps    SavedProperty[]
+  inquiries     Inquiry[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @default(now()) @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@map("verification")
+}
+
+// Real Estate Models
+model Property {
+  id           String          @id @default(cuid())
+  slug         String          @unique
+  title        String
+  location     String
+  neighborhood String
+  priceUsd     Int
+  bedrooms     Int
+  bathrooms    Float
+  sqft         Int
+  propertyType String          @map("property_type")
+  oceanView    Boolean         @default(false) @map("ocean_view")
+  beachfront   Boolean         @default(false)
+  pool         Boolean         @default(false)
+  featured     Boolean         @default(false)
+  description  String
+  address      String?
+  amenities    String[]        @default([])
+  images       String[]        @default([])
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @default(now()) @updatedAt @map("updated_at")
+  savedBy      SavedProperty[]
+  inquiries    Inquiry[]
+  offers       Offer[]
+
+  @@map("properties")
+}
+
+model SavedProperty {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  propertyId String   @map("property_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, propertyId])
+  @@map("saved_properties")
+}
+
+model Lead {
+  id                String   @id @default(cuid())
+  name              String
+  email             String
+  phone             String?
+  propertyId        String?  @map("property_id")
+  propertyTitle     String?  @map("property_title")
+  message           String?
+  source            String   @default("web_form")
+  status            String   @default("new") // new, contacted, viewing, offer_pending, closed
+  agentAssignedName String?  @map("agent_assigned_name")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("leads")
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("contacts")
+}
+
+model Valuation {
+  id                   String   @id @default(cuid())
+  ownerName            String   @map("owner_name")
+  email                String
+  phone                String?
+  neighborhood         String
+  propertyType         String   @map("property_type")
+  bedrooms             Int
+  bathrooms            Float
+  sqft                 Int
+  condition            String   @default("good")
+  oceanView            Boolean  @default(false) @map("ocean_view")
+  estimatedValueLowUsd Int      @map("estimated_value_low_usd")
+  estimatedValueMidUsd Int      @map("estimated_value_mid_usd")
+  estimatedValueHighUsd Int     @map("estimated_value_high_usd")
+  pricePerSqftUsd      Int      @map("price_per_sqft_usd")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  @@map("valuations")
+}
+
+model Offer {
+  id             String    @id @default(cuid())
+  buyerName      String    @map("buyer_name")
+  email          String
+  phone          String
+  propertyId     String?   @map("property_id")
+  property       Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  propertyTitle  String    @map("property_title")
+  offerAmountUsd Int       @map("offer_amount_usd")
+  financingType  String    @default("cash") @map("financing_type")
+  status         String    @default("pending") // pending, accepted, countered, rejected
+  notes          String?
+  counterNotes   String?   @map("counter_notes")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@map("offers")
+}
+
+model Inquiry {
+  id         String    @id @default(cuid())
+  userId     String?   @map("user_id")
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  propertyId String?   @map("property_id")
+  property   Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  name       String
+  email      String
+  message    String
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@map("inquiries")
+}
