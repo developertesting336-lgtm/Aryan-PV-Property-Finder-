@@ -26,7 +26,7 @@ export async function middleware(request: NextRequest) {
   // Rule 2: logged-in user (any role) opens /login or /signup
   // → they're already logged in, send them to their dashboard
   if (session && isAuthPage) {
-    const dest = session.role === 'admin' ? '/admin' : '/';
+    const dest = session.role === 'admin' ? '/admin' : '/dashboard';
     return NextResponse.redirect(new URL(dest, request.url));
   }
 
